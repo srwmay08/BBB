@@ -37,7 +37,14 @@
         <div id="pc-dashboard-view">
             <h2>Player Character Dashboard</h2>
             <div id="pc-dashboard-content">
-                <p class="pc-dashboard-no-selection">Select Player Characters from the left panel to calculate and compare their Damage Per Round (DPR).</p>
+                <div id="dpr-controls" style="padding-bottom: 15px; border-bottom: 1px solid #ccc; margin-bottom: 15px;">
+                    <label for="target-ac-input"><b>Target AC:</b></label>
+                    <input type="number" id="target-ac-input" value="15" style="width: 80px;">
+                    <span>(Enter the AC of the hypothetical enemy to calculate DPR against.)</span>
+                </div>
+                <div id="dpr-comparison-results">
+                    <p class="pc-dashboard-no-selection">Select Player Characters from the left panel to calculate and compare their Damage Per Round (DPR).</p>
+                </div>
             </div>
         </div>
     </div>

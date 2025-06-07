@@ -1,78 +1,48 @@
-// app/static/app.js
+// This object will hold our application's data
+const appState = {
+    allCharacters: [],
+};
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM fully loaded. Fetching characters...");
-    fetchAndDisplayCharacters();
-});
-
-/**
- * Fetches character data from the backend API and calls the render function.
- */
-async function fetchAndDisplayCharacters() {
+// This function runs when the page is fully loaded
+document.addEventListener('DOMContentLoaded', async () => {
     try {
         const response = await fetch('http://127.0.0.1:5001/api/characters');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const characters = await response.json();
-        console.log("Characters fetched successfully:", characters);
-        renderCharacterList(characters);
+        appState.allCharacters = await response.json();
+        
+        UIRenderers.renderCharacterList(
+            appState.allCharacters.filter(c => c.type === 'pc')
+        );
+        setupEventListeners();
+        
     } catch (error) {
-        console.error("Failed to fetch characters:", error);
-        const pcListDiv = document.getElementById('active-pc-list');
-        pcListDiv.innerHTML = '<p style="color: red;">Error loading characters. Is the server running?</p>';
+        console.error("Failed to initialize app:", error);
     }
-}
+});
 
-/**
- * Renders the list of characters on the left-hand side menu.
- * @param {Array} characters - An array of character objects from the API.
- */
-function renderCharacterList(characters) {
-    const pcListDiv = document.getElementById('active-pc-list');
-    if (!characters || characters.length === 0) {
-        pcListDiv.innerHTML = '<p>No characters found in the database.</p>';
-        return;
-    }
 
-    const ul = document.createElement('ul');
+function setupEventListeners() {
+    const pcList = document.getElementById('active-pc-list');
+    const acInput = document.getElementById('target-ac-input');
 
-    // CORRECTED: Instead of filtering, we will now render ALL characters
-    // that were imported from your data folder. This is more reliable.
-    characters.forEach(character => {
-        // We only render if the character has a name.
-        if (!character.name) {
-            return; // Skip this entry if it doesn't have a name
+    // Add a single event listener to the list for efficiency
+    pcList.addEventListener('change', (event) => {
+        if (event.target.type === 'checkbox') {
+            updateDashboardView();
         }
-        
-        const li = document.createElement('li');
-        
-        // Check if the character is a PC or NPC to display it correctly.
-        // Foundry's default is 'character' for PCs and 'npc' for NPCs.
-        const charType = character.type === 'npc' ? 'NPC' : 'PC';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = `pc-checkbox-${character.id}`;
-        checkbox.value = character.id;
-        checkbox.className = 'pc-select-checkbox';
-        
-        const label = document.createElement('label');
-        label.htmlFor = `pc-checkbox-${character.id}`;
-        // Display the name and type (PC/NPC)
-        label.textContent = `${character.name} (${charType})`;
-        
-        li.appendChild(checkbox);
-        li.appendChild(label);
-        ul.appendChild(li);
     });
 
-    // Clear the "Loading..." message and append the new list.
-    pcListDiv.innerHTML = '';
-    pcListDiv.appendChild(ul);
+    // Add an event listener to the AC input to recalculate on change
+    acInput.addEventListener('input', () => {
+        updateDashboardView();
+    });
 }
 
-// --- Placeholder for Tab functionality ---
-function openTab(event, tabName) {
-  console.log(`Tab clicked: ${tabName}`);
+function updateDashboardView() {
+    const selectedCheckboxes = document.querySelectorAll('#active-pc-list input[type="checkbox"]:checked');
+    const selectedPcIds = Array.from(selectedCheckboxes).map(cb => cb.dataset.charId);
+    
+    const selectedPcs = appState.allCharacters.filter(char => selectedPcIds.includes(char.id));
+    const targetAC = parseInt(document.getElementById('target-ac-input').value, 10) || 15;
+    
+    UIRenderers.updatePcDashboard(selectedPcs, targetAC);
 }
