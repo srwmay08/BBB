@@ -1,0 +1,7 @@
+# requirements.txt
+Flask
+Flask-Cors
+google-generativeai
+firebase-admin
+python-dotenv
+gunicorn # For production deployment
