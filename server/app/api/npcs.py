@@ -1,13 +1,34 @@
 # app/api/npcs.py
-from flask import Blueprint, request, jsonify, current_app
-from app.services.auth_service import token_required
-# We will create the firebase_service module next
-# from app.services import firebase_service 
 
-# Create a Blueprint for NPC routes
-# The first argument, 'npcs', is the name of the Blueprint.
-# The second argument, __name__, helps Flask locate the Blueprint's resources.
-npcs_bp = Blueprint('npcs', __name__)
+from flask import Blueprint, request, jsonify, current_app
+from firebase_admin import firestore
+# Correctly import from the services package within our app
+from ..services.auth_service import token_required
+
+# Create a Blueprint named 'npcs_api' for all NPC-related endpoints.
+npcs_bp = Blueprint('npcs_api', __name__)
+
+@npcs_bp.route('/api/worlds/<world_id>/npcs', methods=['GET'])
+@token_required
+def get_npcs_in_world(uid, world_id):
+    """
+    Retrieves all NPCs for a specific world owned by the authenticated user.
+    'uid' is securely provided by the @token_required decorator.
+    """
+    db = current_app.config['DB']
+    
+    # First, verify the user owns the world they are requesting NPCs from.
+    world_doc = db.collection('gameWorlds').document(world_id).get()
+    if not world_doc.exists or world_doc.to_dict().get('userId') != uid:
+        return jsonify({"error": "World not found or access denied"}), 404
+
+    # Fetch NPCs that are linked to the verified world_id.
+    npcs_ref = db.collection('npcs').where('game_world_id', '==', world_id)
+    npcs = [doc.to_dict() | {'id': doc.id} for doc in npcs_ref.stream()]
+    return jsonify(npcs), 200
+
+# Other NPC routes like POST, PUT, DELETE would follow the same pattern.
+
 
 @npcs_bp.route('/api/worlds/<world_id>/npcs', methods=['GET'])
 @token_required
