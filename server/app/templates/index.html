@@ -36,6 +36,25 @@
             visibility: visible;
             opacity: 1;
         }
+
+        #dialogue-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 20px;
+            height: 400px;
+            overflow-y: scroll;
+        }
+
+        .dialogue-box {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .dialogue-box .npc-name {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -56,30 +75,43 @@
                 <button class="tab-link" onclick="openTab(event, 'tab-lore')">LORE</button>
             </div>
         </div>
-        <div id="left-column-content"></div>
+        <div id="left-column-content">
+             <div id="scene-management">
+                <h3>Scenes</h3>
+                <div id="scene-list"></div>
+                <input type="text" id="new-scene-name" placeholder="New Scene Name">
+                <button id="add-scene-btn">Add Scene</button>
+            </div>
+        </div>
     </div>
 
     <div id="resizer"></div>
 
     <div id="center-column" class="column">
-        <div id="dialogue-interface" style="display: none;">
+        <div id="dialogue-interface">
              <h2>Scene Interaction</h2>
+             <div id="dialogue-container"></div>
+             <div id="dialogue-controls">
+                <select id="dialogue-npc-select"></select>
+                <input type="text" id="dialogue-topic-input" placeholder="Enter dialogue topic...">
+                <button id="generate-dialogue-btn">Generate Dialogue</button>
+             </div>
         </div>
         <div id="pc-dashboard-view">
             <h2>Player Character Dashboard</h2>
             <div id="pc-dashboard-content">
-<div id="dpr-controls" style="padding-bottom: 15px; border-bottom: 1px solid #ccc; margin-bottom: 15px;">
-    <div>
-        <label for="sort-by-select"><b>Sort By:</b></label>
-        <select id="sort-by-select">
-            <option value="dpr_adv">Advantage DPR</option>
-            <option value="dpr_normal">Normal DPR</option>
-            <option value="dpr_disadv">Disadvantage DPR</option>
-        </select>
-    </div>
-</div>
-<div id="dpr-comparison-results">
-    </div>
+                <div id="dpr-controls" style="padding-bottom: 15px; border-bottom: 1px solid #ccc; margin-bottom: 15px;">
+                    <div>
+                        <label for="sort-by-select"><b>Sort By:</b></label>
+                        <select id="sort-by-select">
+                            <option value="dpr_adv">Advantage DPR</option>
+                            <option value="dpr_normal">Normal DPR</option>
+                            <option value="dpr_disadv">Disadvantage DPR</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="dpr-comparison-results">
+                    </div>
                     <div>
                         <b>Target Saves:</b>
                         <label>STR: <input type="number" class="save-input" id="target-str-save" value="2"></label>

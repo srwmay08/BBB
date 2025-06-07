@@ -19,9 +19,6 @@ const UIRenderers = {
         pcListDiv.appendChild(ul);
     },
 
-    /**
-     * Creates a span with a detailed tooltip for a DPR value.
-     */
     createDprTooltip(dpr, C, D, H, B, type) {
         const tooltipText = `Formula: (${type} * D) + (H * (D + B))\n` +
                           `(${C.toFixed(4)} * ${D.toFixed(2)}) + (${H.toFixed(2)} * (${D.toFixed(2)} + ${B}))`;
@@ -64,5 +61,41 @@ const UIRenderers = {
             }
         });
         resultsContainer.innerHTML = html;
+    },
+
+    renderSceneList(scenes) {
+        const sceneListDiv = document.getElementById('scene-list');
+        sceneListDiv.innerHTML = '';
+        scenes.forEach(scene => {
+            const sceneEl = document.createElement('div');
+            sceneEl.classList.add('scene-item');
+            sceneEl.textContent = scene.name;
+            sceneEl.dataset.sceneId = scene.id;
+            sceneListDiv.appendChild(sceneEl);
+        });
+    },
+
+    renderDialogue(dialogueEntry) {
+        const container = document.getElementById('dialogue-container');
+        const dialogueBox = document.createElement('div');
+        dialogueBox.classList.add('dialogue-box');
+
+        const npc = appState.allCharacters.find(c => c.id === dialogueEntry.npc_id);
+        const npcName = npc ? npc.name : 'Unknown';
+
+        dialogueBox.innerHTML = `<p class="npc-name">${npcName}:</p><p>${dialogueEntry.dialogue}</p>`;
+        container.appendChild(dialogueBox);
+        container.scrollTop = container.scrollHeight; // Auto-scroll to bottom
+    },
+
+    updateNpcSelector(npcs) {
+        const selector = document.getElementById('dialogue-npc-select');
+        selector.innerHTML = '';
+        npcs.forEach(npc => {
+            const option = document.createElement('option');
+            option.value = npc.id;
+            option.textContent = npc.name;
+            selector.appendChild(option);
+        });
     }
 };
