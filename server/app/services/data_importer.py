@@ -25,8 +25,8 @@ def import_characters_from_json(db: Database):
         print("WARNING: No JSON character files were found. The 'characters' collection will be empty.")
     # --- End of new debug code ---
 
-    # glob.glob finds all pathnames matching a specified pattern
-    for json_file_path in file_list: # Use the pre-fetched file_list
+# Find all pathnames matching the specified pattern
+    for json_file_path in glob.glob(data_path):
         try:
             with open(json_file_path, 'r', encoding='utf-8') as f:
                 character_data = json.load(f)
@@ -34,21 +34,29 @@ def import_characters_from_json(db: Database):
                 char_name = character_data.get('name')
                 
                 if not char_name:
-                    print(f"WARNING: Skipping file {os.path.basename(json_file_path)} - missing 'name' field.")
+                    print(f"  - WARNING: Skipping file {os.path.basename(json_file_path)} - missing 'name' field.")
                     continue
 
+                print(f"  - Processing file for character: {char_name}")
+                
+                # Use update_one with upsert=True.
                 result = characters_collection.update_one(
                     {'name': char_name},
                     {'$set': character_data},
                     upsert=True
                 )
                 
+                # --- New Detailed Debugging ---
+                print(f"    - DB Result: Matched={result.matched_count}, Modified={result.modified_count}, Upserted ID={result.upserted_id}")
+                
                 if result.upserted_id:
-                    print(f"  -> Imported new character: {char_name}")
+                    print(f"    -> SUCCESS: Imported as new character.")
                 elif result.modified_count > 0:
-                    print(f"  -> Updated existing character: {char_name}")
+                    print(f"    -> SUCCESS: Updated existing character.")
+                else:
+                    print(f"    - INFO: Character data already up-to-date in the database.")
 
         except Exception as e:
-            print(f"ERROR: Could not process file {os.path.basename(json_file_path)}. Reason: {e}")
+            print(f"  - ERROR: Could not process file {os.path.basename(json_file_path)}. Reason: {e}")
             
     print("--- Character Data Import Complete ---")
