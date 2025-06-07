@@ -24,8 +24,7 @@
                 <button class="tab-link" onclick="openTab(event, 'tab-lore')">LORE</button>
             </div>
         </div>
-        <div id="left-column-content">
-            </div>
+        <div id="left-column-content"></div>
     </div>
 
     <div id="resizer"></div>
@@ -33,14 +32,24 @@
     <div id="center-column" class="column">
         <div id="dialogue-interface" style="display: none;">
              <h2>Scene Interaction</h2>
-             </div>
+        </div>
         <div id="pc-dashboard-view">
             <h2>Player Character Dashboard</h2>
             <div id="pc-dashboard-content">
                 <div id="dpr-controls" style="padding-bottom: 15px; border-bottom: 1px solid #ccc; margin-bottom: 15px;">
-                    <label for="target-ac-input"><b>Target AC:</b></label>
-                    <input type="number" id="target-ac-input" value="15" style="width: 80px;">
-                    <span>(Enter the AC of the hypothetical enemy to calculate DPR against.)</span>
+                    <div>
+                        <label for="target-ac-input"><b>Target AC:</b></label>
+                        <input type="number" id="target-ac-input" value="15" style="width: 50px;">
+                    </div>
+                    <div>
+                        <b>Target Saves:</b>
+                        <label>STR: <input type="number" class="save-input" id="target-str-save" value="2"></label>
+                        <label>DEX: <input type="number" class="save-input" id="target-dex-save" value="1"></label>
+                        <label>CON: <input type="number" class="save-input" id="target-con-save" value="3"></label>
+                        <label>INT: <input type="number" class="save-input" id="target-int-save" value="0"></label>
+                        <label>WIS: <input type="number" class="save-input" id="target-wis-save" value="2"></label>
+                        <label>CHA: <input type="number" class="save-input" id="target-cha-save" value="0"></label>
+                    </div>
                 </div>
                 <div id="dpr-comparison-results">
                     <p class="pc-dashboard-no-selection">Select Player Characters from the left panel to calculate and compare their Damage Per Round (DPR).</p>

@@ -1,64 +1,110 @@
 const DNDCalculations = {
-    // A mapping of dice types to their average roll value, as per your document.
     DIE_AVERAGES: { 4: 2.5, 6: 3.5, 8: 4.5, 10: 5.5, 12: 6.5 },
 
     /**
-     * Calculates the primary DPR for a character against a given target AC.
-     * @param {object} pc - The character object from the database.
-     * @param {number} targetAC - The AC of the target.
-     * @returns {object} An object containing the calculated DPR and a breakdown.
+     * Calculates DPR for all of a character's actions.
+     * @param {object} pc - The character object.
+     * @param {number} targetAC - The target's Armor Class.
+     * @param {object} targetSaves - An object with target's save bonuses (e.g., {str: 2, dex: 1, ...}).
+     * @returns {object} An object with a list of actions and their DPR.
      */
-    calculateCharacterDPR(pc, targetAC) {
-        // Find the first equipped weapon to use for the calculation.
-        // NOTE: This is a simplification. A real implementation would handle multi-weapon, multi-attack, etc.
-        const weapon = (pc.items || []).find(item => item.type === 'weapon' && item.system?.equipped);
-        if (!weapon) {
-            return { totalDpr: 0, breakdown: "No equipped weapon found." };
-        }
-
+    calculateCharacterDPR(pc, targetAC, targetSaves) {
+        const actions = [];
         const profBonus = Math.floor(((pc.system?.details?.level || 1) - 1) / 4) + 2;
-        
-        // Determine attack ability (STR or DEX for finesse)
-        const abilityKey = (weapon.system?.properties?.fin && pc.system.abilities.dex.mod > pc.system.abilities.str.mod) ? 'dex' : (weapon.system.ability || 'str');
-        const abilityMod = pc.system.abilities[abilityKey]?.mod || 0;
+        const pcProficiencies = pc.system?.traits?.weaponProf?.value || [];
 
-        // A (Attack Bonus)
-        const attackBonus = abilityMod + profBonus;
-
-        // C (Critical Hit Chance) - Assuming a normal 5% chance (nat 20)
-        const critChance = 0.05;
-
-        // H (Hit Chance)
-        // Formula: 1 - ((M - A) / 20)
-        let hitChance = (21 - (targetAC - attackBonus)) / 20;
-        hitChance = Math.max(0.05, Math.min(0.95, hitChance)); // Clamp between 5% and 95%
-
-        // D (Base Damage from Dice) & B (Bonus Static Damage)
-        let totalDiceAverage = 0;
-        let bonusDamage = abilityMod; // Start with the ability modifier
-        
-        const damageParts = weapon.system.damage?.parts || [];
-        damageParts.forEach(part => {
-            const formula = part[0]; // e.g., "1d8" or "2d6"
-            const damageType = part[1]; // e.g., "slashing"
+        // --- 1. WEAPON ATTACKS ---
+        const weapons = (pc.items || []).filter(item => item.type === 'weapon' && item.system?.equipped);
+        weapons.forEach(weapon => {
+            const weaponSystem = weapon.system;
+            const abilityKey = (weaponSystem?.properties?.fin && pc.system.abilities.dex.mod > pc.system.abilities.str.mod) ? 'dex' : (weaponSystem.ability || 'str');
+            const abilityMod = pc.system.abilities[abilityKey]?.mod || 0;
             
-            if (formula.includes('d')) {
-                const [numDice, diceType] = formula.split('d').map(Number);
-                if (this.DIE_AVERAGES[diceType]) {
-                    totalDiceAverage += numDice * this.DIE_AVERAGES[diceType];
+            // Check for proficiency with the specific weapon base type (e.g., 'rapier', 'shortsword')
+            const isProficient = pcProficiencies.includes(weaponSystem?.type?.baseItem) || pcProficiencies.includes(weaponSystem?.type?.value);
+
+            const attackBonus = abilityMod + (isProficient ? profBonus : 0);
+            
+            let hitChance = (21 - (targetAC - attackBonus)) / 20;
+            hitChance = Math.max(0.05, Math.min(0.95, hitChance));
+            const critChance = 0.05;
+
+            let totalDiceAverage = 0;
+            // Correctly add only the ability modifier to bonus damage
+            let bonusDamage = abilityMod; 
+            const damageParts = weaponSystem.damage?.parts || [];
+            damageParts.forEach(part => {
+                 const formula = part[0] || '';
+                if (formula.includes('d')) {
+                    const [numDice, diceType] = formula.split('d').map(Number);
+                    if (this.DIE_AVERAGES[diceType]) {
+                        totalDiceAverage += numDice * this.DIE_AVERAGES[diceType];
+                    }
+                } else if (!isNaN(parseInt(formula))) {
+                    bonusDamage += parseInt(formula);
                 }
-            } else if (!isNaN(parseInt(formula))) {
-                // If a part is just a number, treat it as a static bonus
-                bonusDamage += parseInt(formula);
+            });
+            
+            const averageDamage = totalDiceAverage + bonusDamage;
+            const dpr = (hitChance * averageDamage) + (critChance * totalDiceAverage);
+            
+            actions.push({
+                name: weapon.name,
+                dpr: dpr,
+                breakdown: `+${attackBonus} to hit (vs AC ${targetAC}), Hit%: ${(hitChance * 100).toFixed(0)}%, Avg Dmg: ${averageDamage.toFixed(1)}`
+            });
+        });
+        
+        // --- 2. SPELL ATTACKS & SAVES ---
+        const spells = (pc.items || []).filter(item => item.type === 'spell' && item.system.damage?.parts?.length > 0 && item.system.damage.parts[0][0]);
+        spells.forEach(spell => {
+            const spellAbility = pc.system.attributes.spellcasting || 'int';
+            const spellMod = pc.system.abilities[spellAbility]?.mod || 0;
+            const spellDC = 8 + profBonus + spellMod;
+            const saveInfo = spell.system.save;
+
+            let spellDiceAverage = 0;
+            (spell.system.damage?.parts || []).forEach(part => {
+                 const formula = part[0] || '';
+                 if (formula.includes('d')) {
+                    const [numDice, diceType] = formula.split('d').map(Number);
+                    if (this.DIE_AVERAGES[diceType]) {
+                        spellDiceAverage += numDice * this.DIE_AVERAGES[diceType];
+                    }
+                } else if (!isNaN(parseInt(formula))) {
+                    spellDiceAverage += parseInt(formula);
+                }
+            });
+
+            if (spellDiceAverage > 0) {
+                let successChance = 0;
+                let breakdown = '';
+                
+                // Saving Throw Spells
+                if (saveInfo && saveInfo.ability) {
+                    const targetSaveBonus = targetSaves[saveInfo.ability] || 0;
+                    const chanceToFail = (spellDC - targetSaveBonus - 1) / 20;
+                    successChance = Math.max(0.05, Math.min(0.95, chanceToFail));
+                    breakdown = `DC ${spellDC} ${saveInfo.ability.toUpperCase()} (vs Bonus +${targetSaveBonus}), Fail%: ${(successChance * 100).toFixed(0)}%`;
+                }
+                // Spell Attack Spells
+                else {
+                    const attackBonus = spellMod + profBonus;
+                    successChance = (21 - (targetAC - attackBonus)) / 20;
+                    successChance = Math.max(0.05, Math.min(0.95, successChance));
+                    breakdown = `+${attackBonus} to hit (vs AC ${targetAC}), Hit%: ${(successChance * 100).toFixed(0)}%`;
+                }
+                
+                //This simplification assumes no damage on a successful save.
+                const spellDpr = successChance * spellDiceAverage;
+                actions.push({
+                    name: spell.name,
+                    dpr: spellDpr,
+                    breakdown: `${breakdown}, Avg Dmg: ${spellDiceAverage.toFixed(1)}`
+                });
             }
         });
 
-        // The final DPR calculation from your document: DPR = C*D + H*(D+B)
-        const dpr = (critChance * totalDiceAverage) + (hitChance * (totalDiceAverage + bonusDamage));
-
-        return {
-            totalDpr: dpr,
-            breakdown: `${weapon.name}: +${attackBonus} to hit, Hit%: ${(hitChance * 100).toFixed(0)}%, Avg Dmg: ${(totalDiceAverage + bonusDamage).toFixed(1)}`
-        };
+        return { actions };
     }
 };

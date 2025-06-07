@@ -1,7 +1,4 @@
 const UIRenderers = {
-    /**
-     * Renders the selectable list of Player Characters on the left.
-     */
     renderCharacterList(characters) {
         const pcListDiv = document.getElementById('active-pc-list');
         pcListDiv.innerHTML = '';
@@ -12,7 +9,7 @@ const UIRenderers = {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = `pc-checkbox-${character.id}`;
-            checkbox.dataset.charId = character.id; // Store ID for easy access
+            checkbox.dataset.charId = character.id;
             
             const label = document.createElement('label');
             label.htmlFor = `pc-checkbox-${character.id}`;
@@ -20,15 +17,12 @@ const UIRenderers = {
 
             li.appendChild(checkbox);
             li.appendChild(label);
-ul.appendChild(li);
+            ul.appendChild(li);
         });
         pcListDiv.appendChild(ul);
     },
 
-    /**
-     * Renders the main PC Dashboard view with DPR and stats comparisons.
-     */
-    updatePcDashboard(selectedPcs, targetAC) {
+    updatePcDashboard(selectedPcs, targetAC, targetSaves) {
         const resultsContainer = document.getElementById('dpr-comparison-results');
 
         if (selectedPcs.length === 0) {
@@ -37,21 +31,29 @@ ul.appendChild(li);
         }
 
         let html = '<h4>Damage Per Round (DPR) Comparison</h4>';
-        html += '<div class="table-wrapper"><table class="derived-stats-table">';
-        html += '<thead><tr><th>Character</th><th>DPR</th><th>Attack Details</th></tr></thead><tbody>';
-
+        
         selectedPcs.forEach(pc => {
-            const dprCalcs = DNDCalculations.calculateCharacterDPR(pc, targetAC);
-            html += `
-                <tr>
-                    <td><strong>${pc.name}</strong></td>
-                    <td><strong>${dprCalcs.totalDpr.toFixed(2)}</strong></td>
-                    <td>${dprCalcs.breakdown}</td>
-                </tr>
-            `;
+            html += `<h5>${pc.name}</h5>`;
+            const dprCalcs = DNDCalculations.calculateCharacterDPR(pc, targetAC, targetSaves);
+            
+            if (dprCalcs.actions && dprCalcs.actions.length > 0) {
+                html += '<div class="table-wrapper"><table class="derived-stats-table">';
+                html += '<thead><tr><th>Action</th><th>DPR</th><th>Details</th></tr></thead><tbody>';
+                dprCalcs.actions.forEach(action => {
+                    html += `
+                        <tr>
+                            <td><strong>${action.name}</strong></td>
+                            <td><strong>${action.dpr.toFixed(2)}</strong></td>
+                            <td>${action.breakdown}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table></div>';
+            } else {
+                html += '<p>No damaging actions found for this character.</p>';
+            }
         });
 
-        html += '</tbody></table></div>';
         resultsContainer.innerHTML = html;
     }
 };
