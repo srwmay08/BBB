@@ -22,11 +22,11 @@ const UIRenderers = {
         pcListDiv.appendChild(ul);
     },
 
-    updatePcDashboard(selectedPcs, targetAC, targetSaves) {
+    updatePcDashboard(selectedPcs, targetAC, advantageStatus, targetSaves) {
         const resultsContainer = document.getElementById('dpr-comparison-results');
 
         if (selectedPcs.length === 0) {
-            resultsContainer.innerHTML = `<p class="pc-dashboard-no-selection">Select Player Characters from the left panel to calculate and compare their Damage Per Round (DPR).</p>`;
+            resultsContainer.innerHTML = `<p class="pc-dashboard-no-selection">Select Player Characters to compare their Damage Per Round (DPR).</p>`;
             return;
         }
 
@@ -38,13 +38,14 @@ const UIRenderers = {
             
             if (dprCalcs.actions && dprCalcs.actions.length > 0) {
                 html += '<div class="table-wrapper"><table class="derived-stats-table">';
-                html += '<thead><tr><th>Action</th><th>DPR</th><th>Details</th></tr></thead><tbody>';
-                dprCalcs.actions.forEach(action => {
+                html += '<thead><tr><th>Action</th><th>DPR (Normal)</th><th>DPR (Adv)</th><th>DPR (Disadv)</th></tr></thead><tbody>';
+                dprCalcs.actions.sort((a, b) => b.dpr_adv - a.dpr_adv).forEach(action => {
                     html += `
                         <tr>
                             <td><strong>${action.name}</strong></td>
-                            <td><strong>${action.dpr.toFixed(2)}</strong></td>
-                            <td>${action.breakdown}</td>
+                            <td>${action.dpr_normal.toFixed(2)}</td>
+                            <td>${action.dpr_adv.toFixed(2)}</td>
+                            <td>${action.dpr_disadv.toFixed(2)}</td>
                         </tr>
                     `;
                 });
