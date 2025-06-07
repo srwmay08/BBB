@@ -4,9 +4,8 @@ from flask_cors import CORS
 from pymongo import MongoClient
 import google.generativeai as genai
 
-# For now, we will use a mock authentication decorator until you decide on
-# a user authentication solution (like JWT, etc.).
-from .services.mock_db_service import mock_token_required
+# CORRECTED: Import from the new, correct auth_service.py file
+from .services.auth_service import token_required
 
 def create_app(config_object):
     app = Flask(__name__)
