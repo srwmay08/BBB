@@ -92,7 +92,8 @@ def create_app(config_object):
 
     # --- Health Check Route ---
     @app.route('/')
-    def index():
-        return jsonify({"message": "TTRPG AI Nexus Backend is running with MongoDB!"}), 200
+    def dashboard():
+        """Renders the main HTML interface."""
+        return render_template('index.html')
 
     return app
