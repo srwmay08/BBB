@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTRPG AI Nexus</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <div id="left-column" class="column">
+        <div id="left-column-header">
+            <h2>GM Controls</h2>
+            <div id="pc-list-section-outer" class="collapsible-section">
+                <h3>Player Characters</h3>
+                <div class="collapsible-content character-list">
+                    <div id="active-pc-list"><p><em>Loading PCs...</em></p></div>
+                </div>
+            </div>
+            <hr class="tab-hr">
+            <div class="tabs">
+                <button class="tab-link active" onclick="openTab(event, 'tab-scene')">SCENE</button>
+                <button class="tab-link" onclick="openTab(event, 'tab-npcs')">NPCs</button>
+                <button class="tab-link" onclick="openTab(event, 'tab-lore')">LORE</button>
+            </div>
+        </div>
+        <div id="left-column-content">
+            </div>
+    </div>
+
+    <div id="resizer"></div>
+
+    <div id="center-column" class="column">
+        <div id="dialogue-interface" style="display: none;">
+             <h2>Scene Interaction</h2>
+             </div>
+        <div id="pc-dashboard-view">
+            <h2>Player Character Dashboard</h2>
+            <div id="pc-dashboard-content">
+                <p class="pc-dashboard-no-selection">Select Player Characters from the left panel to calculate and compare their Damage Per Round (DPR).</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
