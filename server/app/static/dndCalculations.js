@@ -11,7 +11,7 @@ const DNDCalculations = {
 
         const profBonus = Math.floor(((pc.system.details?.level || 1) - 1) / 4) + 2;
         
-        // --- WEAPON ATTACKS ---
+        // --- 1. WEAPON ATTACKS ---
         const weapons = (pc.items || []).filter(item => item.type === 'weapon' && item.system?.equipped);
         weapons.forEach(weapon => {
             const weaponSystem = weapon.system;
@@ -42,27 +42,43 @@ const DNDCalculations = {
             const CD = Math.pow(C, 2);
             const dpr_disadv = (CD * D) + (HD * (D + B));
             
-            actions.push({ name: weapon.name, dpr_normal, dpr_adv, dpr_disadv });
+            if (D > 0) {
+                 actions.push({ name: weapon.name, dpr_normal, dpr_adv, dpr_disadv });
+            }
         });
         
-        // --- SPELL ATTACKS & SAVES ---
-        const spells = (pc.items || []).filter(item => item.type === 'spell' && item.system?.damage?.parts?.length > 0);
-        
-        spells.forEach(spell => {
-            const spellAbilityKey = pc.system.attributes.spellcasting || 'int';
-            const spellMod = this.getAbilityModifier(pc.system.abilities[spellAbilityKey]?.value || 10);
+        // --- 2. SPELL ATTACKS & SAVES (REVISED LOGIC) ---
+        const allSpells = (pc.items || []).filter(item => item.type === 'spell');
+        console.log(`[INFO] For ${pc.name}, found ${allSpells.length} total spells. Checking for damage...`);
+
+        allSpells.forEach(spell => {
+            if (!spell.system?.damage?.parts || spell.system.damage.parts.length === 0) {
+                return; // Skip spells with no damage parts array
+            }
             
-            let D = 0;
-            (spell.system.damage?.parts || []).forEach(part => {
-                let formula = Array.isArray(part) ? part[0] : (part.denomination ? `${part.number || 1}d${part.denomination}` : '');
-                if (formula && formula.includes('d')) {
+            let D = 0; // Average Dice Damage
+            spell.system.damage.parts.forEach(part => {
+                let formula = '';
+                if (Array.isArray(part) && typeof part[0] === 'string') { // e.g., ["1d6", "fire"]
+                    formula = part[0];
+                } else if (typeof part === 'object' && part.denomination) { // e.g., { number: 1, denomination: 8 }
+                    formula = `${part.number || 1}d${part.denomination}`;
+                }
+                
+                if (formula.includes('d')) {
                     const [numDice, diceType] = formula.split('d').map(Number);
-                    D += (numDice || 1) * (this.DIE_AVERAGES[diceType] || 0);
+                    if(this.DIE_AVERAGES[diceType]) {
+                        D += (numDice || 1) * this.DIE_AVERAGES[diceType];
+                    }
                 }
             });
 
             if (D > 0) {
+                 console.log(`[SUCCESS] Found damaging spell for ${pc.name}: ${spell.name} with avg damage ${D}`);
+                 const spellAbilityKey = pc.system.attributes.spellcasting || 'int';
+                 const spellMod = this.getAbilityModifier(pc.system.abilities[spellAbilityKey]?.value || 10);
                  let dpr_normal = 0, dpr_adv = 0, dpr_disadv = 0;
+
                 if (spell.system.save?.ability) {
                     const spellDC = 8 + profBonus + spellMod;
                     const targetSaveBonus = targetSaves[spell.system.save.ability] || 0;
@@ -70,7 +86,7 @@ const DNDCalculations = {
                     dpr_normal = dpr_adv = dpr_disadv = chanceToFail * D;
                 } else {
                     const A = spellMod + profBonus;
-                    const B = 0; 
+                    const B = 0;
                     const C = 0.05;
                     const M = targetAC;
 
