@@ -11,10 +11,18 @@ def get_characters_route():
     """
     db_characters = current_app.config['DB']['characters']
     
-    # Find all documents in the collection. The {} means no filter.
-    characters = db_characters.find({})
+    # Find all documents in the collection.
+    # The pymongo .find() method returns a cursor, which we need to convert to a list
+    # to see its contents and count them.
+    characters_cursor = db_characters.find({})
+    results = [mongo_db_service.mongo_to_dict(char) for char in characters_cursor]
     
-    # Convert documents to a list of dictionaries, handling the MongoDB ObjectId
-    results = [mongo_db_service.mongo_to_dict(char) for char in characters]
+    # --- FINAL DEBUG LOGS ---
+    # This will tell us if the database query during the API request is returning any data.
+    print(f"[API] Found {len(results)} characters in the database during the request.")
+    if results:
+        print(f"[API] First character name found: {results[0].get('name')}")
+    else:
+        print("[API] The database query returned an empty list. No characters were found.")
     
     return jsonify(results), 200
