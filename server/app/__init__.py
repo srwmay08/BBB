@@ -82,10 +82,13 @@ def create_app(config_object):
 
     # --- Register Blueprints ---
     with app.app_context():
-        from .api import worlds, npcs # Import your blueprint modules
+        # Import your blueprint modules
+        from .api import worlds, npcs, scenes, characters 
+
         app.register_blueprint(worlds.worlds_bp)
         app.register_blueprint(npcs.npcs_bp)
-        # Register other blueprints here
+        app.register_blueprint(scenes.scenes_bp)
+        app.register_blueprint(characters.characters_bp) 
 
     # --- Health Check Route ---
     @app.route('/')
