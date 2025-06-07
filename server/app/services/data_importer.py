@@ -7,8 +7,8 @@ from pymongo.database import Database
 def import_characters_from_json(db: Database):
     """
     Scans the app/data/ directory for JSON files, parses them, and upserts them
-    into the 'characters' collection in MongoDB. Upserting prevents creating
-    duplicate characters on every server restart.
+    into the 'characters' collection in MongoDB. It now differentiates between
+    PCs and NPCs based on the 'type' field in the JSON.
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
     data_path = os.path.join(current_dir, '..', 'data', '*.json')
@@ -17,15 +17,12 @@ def import_characters_from_json(db: Database):
     
     print("--- Starting Character Data Import ---")
     
-    # --- Start of new debug code ---
     print(f"DEBUG: Searching for JSON files using pattern: {data_path}")
     file_list = glob.glob(data_path)
     print(f"DEBUG: Found {len(file_list)} files: {[os.path.basename(p) for p in file_list]}")
     if not file_list:
         print("WARNING: No JSON character files were found. The 'characters' collection will be empty.")
-    # --- End of new debug code ---
 
-# Find all pathnames matching the specified pattern
     for json_file_path in glob.glob(data_path):
         try:
             with open(json_file_path, 'r', encoding='utf-8') as f:
@@ -37,7 +34,11 @@ def import_characters_from_json(db: Database):
                     print(f"  - WARNING: Skipping file {os.path.basename(json_file_path)} - missing 'name' field.")
                     continue
 
-                print(f"  - Processing file for character: {char_name}")
+                # Differentiate between PC ('character') and NPC ('npc')
+                char_type = character_data.get('type', 'npc')  # Default to 'npc'
+                character_data['character_type'] = char_type
+                
+                print(f"  - Processing file for: {char_name} (Type: {char_type})")
                 
                 # Use update_one with upsert=True.
                 result = characters_collection.update_one(
@@ -46,7 +47,6 @@ def import_characters_from_json(db: Database):
                     upsert=True
                 )
                 
-                # --- New Detailed Debugging ---
                 print(f"    - DB Result: Matched={result.matched_count}, Modified={result.modified_count}, Upserted ID={result.upserted_id}")
                 
                 if result.upserted_id:

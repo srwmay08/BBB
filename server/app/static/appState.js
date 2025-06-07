@@ -1,6 +1,5 @@
 const appState = {
     allCharacters: [],
-    scenes: [],
     activeSceneId: null,
 };
 
@@ -10,93 +9,55 @@ function openTab(evt, tabName) {
         tablinks[i].className = tablinks[i].className.replace(" active", "");
     }
     evt.currentTarget.className += " active";
+
+    const dprView = document.getElementById('pc-dashboard-view');
+    const sceneView = document.getElementById('dialogue-interface');
     
-    // Toggle visibility based on tab
-    const dashboardView = document.getElementById('pc-dashboard-view');
-    const dialogueView = document.getElementById('dialogue-interface');
+    // Hide all views first
+    dprView.style.display = 'none';
+    sceneView.style.display = 'none';
 
-    if (tabName === 'tab-scene') {
-        dashboardView.style.display = 'none';
-        dialogueView.style.display = 'block';
+    // Show the selected view
+    if (tabName === 'tab-dpr') {
+        dprView.style.display = 'block';
+    } else if (tabName === 'tab-scene') {
+        sceneView.style.display = 'block';
     } else {
-        dashboardView.style.display = 'block';
-        dialogueView.style.display = 'none';
+        // Default to DPR view if something else is clicked or on error
+        dprView.style.display = 'block';
     }
-
     console.log(`Switched to tab: ${tabName}`);
 }
 
 async function fetchAndDisplayCharacters() {
     try {
         appState.allCharacters = await ApiService.getAllCharacters();
-        const playerCharacters = appState.allCharacters.filter(c => c.type === 'character');
-        UIRenderers.renderCharacterList(playerCharacters);
+        const playerCharacters = appState.allCharacters.filter(c => c.character_type === 'character' || c.type === 'character');
+        const nonPlayerCharacters = appState.allCharacters.filter(c => c.character_type === 'npc' || (c.type !== 'character' && c.type !== undefined));
+        
+        UIRenderers.renderCharacterList(playerCharacters, 'pc');
+        UIRenderers.renderCharacterList(nonPlayerCharacters, 'npc');
+
     } catch (error) {
         console.error("Failed to fetch characters:", error);
-        document.getElementById('active-pc-list').innerHTML = '<p style="color: red;">Error loading characters.</p>';
-    }
-}
-
-async function fetchAndDisplayScenes() {
-    try {
-        // Assuming a default world for now
-        appState.scenes = await ApiService.getScenesForWorld('default-world');
-        UIRenderers.renderSceneList(appState.scenes);
-    } catch (error) {
-        console.error("Failed to fetch scenes:", error);
-    }
-}
-
-function setActiveScene(sceneId) {
-    appState.activeSceneId = sceneId;
-    const scene = appState.scenes.find(s => s.id === sceneId);
-    if (scene) {
-        const dialogueContainer = document.getElementById('dialogue-container');
-        dialogueContainer.innerHTML = '';
-        scene.dialogue_log.forEach(entry => UIRenderers.renderDialogue(entry));
-        
-        // Update NPC selector for the dialogue
-        const sceneNpcs = appState.allCharacters.filter(c => scene.npc_ids.includes(c.id));
-        UIRenderers.updateNpcSelector(sceneNpcs);
+        document.getElementById('active-pc-list').innerHTML = '<p style="color: red;">Error loading PCs.</p>';
+        document.getElementById('active-npc-list').innerHTML = '<p style="color: red;">Error loading NPCs.</p>';
     }
 }
 
 function setupEventListeners() {
-    const updateView = () => updateDashboardView();
+    const updateDprView = () => {
+        // Only update DPR if the DPR tab is active and no scene is selected
+        if (appState.activeSceneId === null) {
+            updateDashboardView();
+        }
+    };
     document.getElementById('active-pc-list').addEventListener('change', (event) => {
         if (event.target.type === 'checkbox') {
-            updateView();
+            updateDprView();
         }
     });
-    document.getElementById('dpr-controls').addEventListener('input', updateView);
-
-    // Scene management listeners
-    document.getElementById('add-scene-btn').addEventListener('click', async () => {
-        const newSceneNameInput = document.getElementById('new-scene-name');
-        const newSceneName = newSceneNameInput.value.trim();
-        if (newSceneName) {
-            await ApiService.createScene(newSceneName, 'default-world');
-            newSceneNameInput.value = '';
-            fetchAndDisplayScenes();
-        }
-    });
-
-    document.getElementById('scene-list').addEventListener('click', (event) => {
-        if (event.target.classList.contains('scene-item')) {
-            const sceneId = event.target.dataset.sceneId;
-            setActiveScene(sceneId);
-        }
-    });
-
-    // Dialogue generation listener
-    document.getElementById('generate-dialogue-btn').addEventListener('click', async () => {
-        const npcId = document.getElementById('dialogue-npc-select').value;
-        const topic = document.getElementById('dialogue-topic-input').value;
-        if (appState.activeSceneId && npcId) {
-            const result = await ApiService.generateDialogue(appState.activeSceneId, npcId, topic);
-            UIRenderers.renderDialogue(result);
-        }
-    });
+    document.getElementById('dpr-controls').addEventListener('input', updateDprView);
 }
 
 function updateDashboardView() {
@@ -104,7 +65,10 @@ function updateDashboardView() {
     const selectedPcIds = Array.from(selectedCheckboxes).map(cb => cb.dataset.charId);
     
     const selectedPcs = appState.allCharacters.filter(char => selectedPcIds.includes(char.id));
-    const targetAC = parseInt(document.getElementById('target-ac-input').value, 10) || 15;
+    
+    // Safely get the target AC value
+    const targetACInput = document.getElementById('target-ac-input');
+    const targetAC = targetACInput ? parseInt(targetACInput.value, 10) : 15;
     
     const targetSaves = {
         str: parseInt(document.getElementById('target-str-save').value, 10) || 0,
@@ -120,7 +84,9 @@ function updateDashboardView() {
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchAndDisplayCharacters();
-    fetchAndDisplayScenes();
     setupEventListeners();
+    // Set the initial view to the DPR dashboard
+    document.getElementById('pc-dashboard-view').style.display = 'block';
+    document.getElementById('dialogue-interface').style.display = 'none';
     updateDashboardView();
 });
