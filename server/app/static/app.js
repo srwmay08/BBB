@@ -1,6 +1,5 @@
 // app/static/app.js
 
-// This function runs automatically when the webpage is fully loaded.
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded. Fetching characters...");
     fetchAndDisplayCharacters();
@@ -11,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function fetchAndDisplayCharacters() {
     try {
-        // Our backend runs on port 5001, and we created the /api/characters endpoint.
         const response = await fetch('http://127.0.0.1:5001/api/characters');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -37,26 +35,32 @@ function renderCharacterList(characters) {
         return;
     }
 
-    // Create an unordered list to hold the characters.
     const ul = document.createElement('ul');
 
-    // Filter for characters that are likely PCs (this is a guess, you can refine it)
-    const playerCharacters = characters.filter(char => char.type === 'pc');
-
-    playerCharacters.forEach(character => {
+    // CORRECTED: Instead of filtering, we will now render ALL characters
+    // that were imported from your data folder. This is more reliable.
+    characters.forEach(character => {
+        // We only render if the character has a name.
+        if (!character.name) {
+            return; // Skip this entry if it doesn't have a name
+        }
+        
         const li = document.createElement('li');
         
-        // Add a checkbox to select/deselect the character for DPR comparison.
+        // Check if the character is a PC or NPC to display it correctly.
+        // Foundry's default is 'character' for PCs and 'npc' for NPCs.
+        const charType = character.type === 'npc' ? 'NPC' : 'PC';
+        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.id = `pc-checkbox-${character.id}`;
         checkbox.value = character.id;
         checkbox.className = 'pc-select-checkbox';
         
-        // Add a label for the checkbox which will contain the character's name.
         const label = document.createElement('label');
         label.htmlFor = `pc-checkbox-${character.id}`;
-        label.textContent = character.name;
+        // Display the name and type (PC/NPC)
+        label.textContent = `${character.name} (${charType})`;
         
         li.appendChild(checkbox);
         li.appendChild(label);
@@ -68,9 +72,7 @@ function renderCharacterList(characters) {
     pcListDiv.appendChild(ul);
 }
 
-// --- Placeholder for Tab functionality from your HTML ---
+// --- Placeholder for Tab functionality ---
 function openTab(event, tabName) {
-  // This is a placeholder. In a real app, you would have logic
-  // to show/hide the different tabs in the left column.
   console.log(`Tab clicked: ${tabName}`);
 }
