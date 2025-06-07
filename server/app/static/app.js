@@ -3,6 +3,23 @@ const appState = {
     allCharacters: [],
 };
 
+// New function in app.js
+async function fetchAndDisplayCharacters() {
+    try {
+        // Use your centralized ApiService to fetch data
+        const characters = await ApiService.getAllCharacters();
+        console.log("Characters fetched successfully:", characters);
+
+        // Use your centralized UIRenderer to build the character list
+        UIRenderers.renderCharacterList(characters);
+
+    } catch (error) {
+        console.error("Failed to fetch and display characters:", error);
+        const pcListDiv = document.getElementById('active-pc-list');
+        pcListDiv.innerHTML = '<p style="color: red;">Error loading characters. Is the server running and is the API service correctly configured?</p>';
+    }
+}
+
 // This function runs when the page is fully loaded
 document.addEventListener('DOMContentLoaded', async () => {
     try {
