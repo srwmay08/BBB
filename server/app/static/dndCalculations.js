@@ -1,27 +1,30 @@
 const DNDCalculations = {
     DIE_AVERAGES: { 4: 2.5, 6: 3.5, 8: 4.5, 10: 5.5, 12: 6.5 },
 
-    /**
-     * Calculates DPR for all of a character's actions.
-     * @param {object} pc - The character object.
-     * @param {number} targetAC - The target's Armor Class.
-     * @param {object} targetSaves - An object with target's save bonuses (e.g., {str: 2, dex: 1, ...}).
-     * @returns {object} An object with a list of actions and their DPR.
-     */
     calculateCharacterDPR(pc, targetAC, targetSaves) {
         const actions = [];
-        const profBonus = Math.floor(((pc.system?.details?.level || 1) - 1) / 4) + 2;
-        const pcProficiencies = pc.system?.traits?.weaponProf?.value || [];
+        if (!pc.system) return { actions }; // Guard against missing system data
+
+        const profBonus = Math.floor(((pc.system.details?.level || 1) - 1) / 4) + 2;
+        const pcProficiencies = pc.system.traits?.weaponProf?.value || [];
 
         // --- 1. WEAPON ATTACKS ---
         const weapons = (pc.items || []).filter(item => item.type === 'weapon' && item.system?.equipped);
         weapons.forEach(weapon => {
             const weaponSystem = weapon.system;
-            const abilityKey = (weaponSystem?.properties?.fin && pc.system.abilities.dex.mod > pc.system.abilities.str.mod) ? 'dex' : (weaponSystem.ability || 'str');
+            if (!weaponSystem?.damage) return;
+
+            const abilityKey = (weaponSystem.properties?.fin && pc.system.abilities.dex.mod > pc.system.abilities.str.mod) ? 'dex' : (weaponSystem.ability || 'str');
             const abilityMod = pc.system.abilities[abilityKey]?.mod || 0;
             
-            // Check for proficiency with the specific weapon base type (e.g., 'rapier', 'shortsword')
-            const isProficient = pcProficiencies.includes(weaponSystem?.type?.baseItem) || pcProficiencies.includes(weaponSystem?.type?.value);
+            const weaponType = weaponSystem.type?.value; // e.g., 'simpleM'
+            const weaponBase = weaponSystem.type?.baseItem; // e.g., 'dagger'
+            
+            let isProficient = pcProficiencies.includes(weaponBase);
+            if (!isProficient) {
+                if (weaponType?.startsWith('simple') && pcProficiencies.includes('sim')) isProficient = true;
+                if (weaponType?.startsWith('martial') && pcProficiencies.includes('mar')) isProficient = true;
+            }
 
             const attackBonus = abilityMod + (isProficient ? profBonus : 0);
             
@@ -30,22 +33,16 @@ const DNDCalculations = {
             const critChance = 0.05;
 
             let totalDiceAverage = 0;
-            // Correctly add only the ability modifier to bonus damage
-            let bonusDamage = abilityMod; 
-            const damageParts = weaponSystem.damage?.parts || [];
-            damageParts.forEach(part => {
-                 const formula = part[0] || '';
-                if (formula.includes('d')) {
-                    const [numDice, diceType] = formula.split('d').map(Number);
-                    if (this.DIE_AVERAGES[diceType]) {
-                        totalDiceAverage += numDice * this.DIE_AVERAGES[diceType];
-                    }
-                } else if (!isNaN(parseInt(formula))) {
-                    bonusDamage += parseInt(formula);
-                }
-            });
+            const damageBase = weaponSystem.damage.base;
+            if (damageBase && damageBase.denomination) {
+                totalDiceAverage += (damageBase.number || 1) * (this.DIE_AVERAGES[damageBase.denomination] || 0);
+            }
+
+            // Damage bonus is only the relevant ability modifier
+            const bonusDamage = abilityMod;
             
             const averageDamage = totalDiceAverage + bonusDamage;
+            // DPR = (Normal Hit Chance * Average Damage) + (Crit Chance * Average Dice Damage)
             const dpr = (hitChance * averageDamage) + (critChance * totalDiceAverage);
             
             actions.push({
@@ -95,7 +92,7 @@ const DNDCalculations = {
                     breakdown = `+${attackBonus} to hit (vs AC ${targetAC}), Hit%: ${(successChance * 100).toFixed(0)}%`;
                 }
                 
-                //This simplification assumes no damage on a successful save.
+                // NOTE: This simplification assumes no damage on a successful save.
                 const spellDpr = successChance * spellDiceAverage;
                 actions.push({
                     name: spell.name,
