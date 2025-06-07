@@ -66,23 +66,16 @@ const DNDCalculations = {
             hasLogged = true;
         });
         
-        // --- 2. SPELL ATTACKS & SAVES ---
-        const spells = (pc.items || []).filter(item => item.type === 'spell' && item.system?.damage?.parts?.length > 0 && item.system.damage.parts[0]);
-        console.log(`[INFO] Found ${spells.length} damaging spells for ${pc.name}.`);
-
+        // --- SPELL ATTACKS & SAVES ---
+        const spells = (pc.items || []).filter(item => item.type === 'spell' && item.system?.damage?.parts?.length > 0);
+        
         spells.forEach(spell => {
             const spellAbilityKey = pc.system.attributes.spellcasting || 'int';
             const spellMod = this.getAbilityModifier(pc.system.abilities[spellAbilityKey]?.value || 10);
             
             let D = 0;
             (spell.system.damage?.parts || []).forEach(part => {
-                let formula = '';
-                if (Array.isArray(part) && typeof part[0] === 'string') {
-                    formula = part[0];
-                } else if (typeof part === 'object' && part !== null && part.denomination) {
-                    formula = `${part.number || 1}d${part.denomination}`;
-                }
-
+                let formula = Array.isArray(part) ? part[0] : (part.denomination ? `${part.number || 1}d${part.denomination}` : '');
                 if (formula.includes('d')) {
                     const [numDice, diceType] = formula.split('d').map(Number);
                     D += (numDice || 1) * (this.DIE_AVERAGES[diceType] || 0);
@@ -90,30 +83,26 @@ const DNDCalculations = {
             });
 
             if (D > 0) {
-                let dpr_normal = 0, dpr_adv = 0, dpr_disadv = 0;
-                
-                if (spell.system.save?.ability) { // Saving Throw Spell
+                 let dpr_normal = 0, dpr_adv = 0, dpr_disadv = 0;
+                if (spell.system.save?.ability) {
                     const spellDC = 8 + profBonus + spellMod;
                     const targetSaveBonus = targetSaves[spell.system.save.ability] || 0;
                     const chanceToFail = Math.max(0.05, Math.min(0.95, (spellDC - targetSaveBonus - 1) / 20));
                     dpr_normal = dpr_adv = dpr_disadv = chanceToFail * D;
-                } else { // Spell Attack Spell
+                } else {
                     const A = spellMod + profBonus;
                     const B = 0;
                     const C = 0.05;
-
                     let H = Math.max(0.05, Math.min(0.95, 1 - ((targetAC - A) / 20)));
                     dpr_normal = (C * D) + (H * (D + B));
-
                     let HA = Math.max(0.0025, Math.min(0.9975, 1 - Math.pow(((targetAC - A) / 20), 2)));
                     const CA = 1 - Math.pow((1 - C), 2);
                     dpr_adv = (CA * D) + (HA * (D + B));
-                    
                     let HD = Math.max(0.0025, Math.min(0.9975, Math.pow(((21 - (targetAC - A)) / 20), 2)));
                     const CD = Math.pow(C, 2);
                     dpr_disadv = (CD * D) + (HD * (D + B));
                 }
-                actions.push({ name: spell.name, dpr_normal, dpr_adv, dpr_disadv });
+                 actions.push({ name: spell.name, dpr_normal, dpr_adv, dpr_disadv });
             }
         });
         

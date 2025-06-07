@@ -22,8 +22,9 @@ const UIRenderers = {
         pcListDiv.appendChild(ul);
     },
 
-    updatePcDashboard(selectedPcs, targetAC, advantageStatus, targetSaves) {
+    updatePcDashboard(selectedPcs, targetAC, targetSaves) {
         const resultsContainer = document.getElementById('dpr-comparison-results');
+        resultsContainer.innerHTML = ''; // Clear previous results
 
         if (selectedPcs.length === 0) {
             resultsContainer.innerHTML = `<p class="pc-dashboard-no-selection">Select Player Characters to compare their Damage Per Round (DPR).</p>`;
